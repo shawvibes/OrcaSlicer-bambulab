@@ -2060,6 +2060,8 @@ void GUI_App::init_networking_callbacks()
                     if (sel && sel->get_dev_id() == dev_id) {
                         obj->parse_json("cloud", msg);
                         GUI::wxGetApp().sidebar().load_ams_list(obj);
+                        if (auto* sync = wxGetApp().fila_manager_sync())
+                            sync->on_device_update(obj);
                     } else {
                         obj->parse_json("cloud", msg, true);
                     }
@@ -2105,10 +2107,12 @@ void GUI_App::init_networking_callbacks()
 
                 if (MachineObject* obj = m_device_manager->get_my_machine(dev_id)) {
                     obj->parse_json("lan", msg);
-                    // Orca: skip it if it doesn't support subscription based filament sync
-                    if (this->m_device_manager->get_selected_machine() == obj &&
-                        m_agent->get_filament_sync_mode() == FilamentSyncMode::subscription) {
-                        GUI::wxGetApp().sidebar().load_ams_list(obj);
+                    if (this->m_device_manager->get_selected_machine() == obj) {
+                        // Orca: skip sidebar refresh if subscription-based sync is unavailable
+                        if (m_agent->get_filament_sync_mode() == FilamentSyncMode::subscription)
+                            GUI::wxGetApp().sidebar().load_ams_list(obj);
+                        if (auto* sync = wxGetApp().fila_manager_sync())
+                            sync->on_device_update(obj);
                     }
                 }
 
@@ -2510,6 +2514,11 @@ bool GUI_App::OnInit()
 int GUI_App::OnExit()
 {
     stop_sync_user_preset();
+
+    if (m_fila_manager_sync) {
+        delete m_fila_manager_sync;
+        m_fila_manager_sync = nullptr;
+    }
 
     if (m_fila_manager_store) {
         m_fila_manager_store->save();
@@ -3051,6 +3060,10 @@ bool GUI_App::on_init_inner()
         m_fila_manager_store = new wgtFilaManagerStore();
         m_fila_manager_store->load();
         BOOST_LOG_TRIVIAL(info) << "Filament Manager store initialized";
+    }
+    if (!m_fila_manager_sync) {
+        m_fila_manager_sync = new wgtFilaManagerSync(m_fila_manager_store);
+        BOOST_LOG_TRIVIAL(info) << "Filament Manager sync initialized";
     }
 
     BOOST_LOG_TRIVIAL(info) << "create the main window";

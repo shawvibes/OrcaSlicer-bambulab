@@ -18,6 +18,7 @@
 #include "slic3r/GUI/Jobs/UpgradeNetworkJob.hpp"
 #include "slic3r/GUI/HttpServer.hpp"
 #include "slic3r/GUI/fila_manager/wgtFilaManagerStore.h"
+#include "slic3r/GUI/fila_manager/wgtFilaManagerSync.h"
 #include "../Utils/PrintHost.hpp"
 
 #include <wx/app.h>
@@ -291,6 +292,7 @@ private:
     //BBS
     std::atomic<bool> m_is_closing {false};
     wgtFilaManagerStore*    m_fila_manager_store { nullptr };
+    wgtFilaManagerSync*     m_fila_manager_sync  { nullptr };
     Slic3r::DeviceManager* m_device_manager { nullptr };
     Slic3r::UserManager* m_user_manager { nullptr };
     Slic3r::TaskManager* m_task_manager { nullptr };
@@ -346,6 +348,7 @@ public:
     HMSQuery* get_hms_query() { return hms_query; }
     NetworkAgent* getAgent() { return m_agent; }
     wgtFilaManagerStore* fila_manager_store() { return m_fila_manager_store; }
+    wgtFilaManagerSync*  fila_manager_sync()  { return m_fila_manager_sync; }
 
     // Dynamic printer agent switching
     void switch_printer_agent();
