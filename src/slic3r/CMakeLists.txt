@@ -657,6 +657,7 @@ set(SLIC3R_GUI_SOURCES
 add_subdirectory(GUI/DeviceCore)
 add_subdirectory(GUI/DeviceTab)
 add_subdirectory(GUI/fila_manager)
+add_subdirectory(GUI/DeviceWeb)
 add_subdirectory(Utils/PJarczakLinuxBridge)
 
 if (WIN32)

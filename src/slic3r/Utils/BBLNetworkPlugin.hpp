@@ -91,6 +91,11 @@ typedef int (*func_get_my_message)(void *agent, int type, int after, int limit, 
 typedef int (*func_check_user_task_report)(void *agent, int* task_id, bool* printable);
 typedef int (*func_get_user_print_info)(void *agent, unsigned int* http_code, std::string* http_body);
 typedef int (*func_get_user_tasks)(void *agent, TaskQueryParams params, std::string* http_body);
+typedef int (*func_get_filament_spools)(void *agent, FilamentQueryParams params, std::string* http_body);
+typedef int (*func_create_filament_spool)(void *agent, std::string request_body, std::string* http_body);
+typedef int (*func_update_filament_spool)(void *agent, std::string spool_id, std::string request_body, std::string* http_body);
+typedef int (*func_delete_filament_spools)(void *agent, FilamentDeleteParams params, std::string* http_body);
+typedef int (*func_get_filament_config)(void *agent, std::string* http_body);
 typedef int (*func_get_printer_firmware)(void *agent, std::string dev_id, unsigned* http_code, std::string* http_body);
 typedef int (*func_get_task_plate_index)(void *agent, std::string task_id, int* plate_index);
 typedef int (*func_get_user_info)(void *agent, int* identifier);
@@ -346,6 +351,11 @@ public:
     func_check_user_task_report get_check_user_task_report() const { return m_check_user_task_report; }
     func_get_user_print_info get_get_user_print_info() const { return m_get_user_print_info; }
     func_get_user_tasks get_get_user_tasks() const { return m_get_user_tasks; }
+    func_get_filament_spools get_get_filament_spools() const { return m_get_filament_spools; }
+    func_create_filament_spool get_create_filament_spool() const { return m_create_filament_spool; }
+    func_update_filament_spool get_update_filament_spool() const { return m_update_filament_spool; }
+    func_delete_filament_spools get_delete_filament_spools() const { return m_delete_filament_spools; }
+    func_get_filament_config get_get_filament_config() const { return m_get_filament_config; }
     func_get_printer_firmware get_get_printer_firmware() const { return m_get_printer_firmware; }
     func_get_task_plate_index get_get_task_plate_index() const { return m_get_task_plate_index; }
     func_get_user_info get_get_user_info() const { return m_get_user_info; }
@@ -482,6 +492,11 @@ private:
     func_check_user_task_report m_check_user_task_report{nullptr};
     func_get_user_print_info m_get_user_print_info{nullptr};
     func_get_user_tasks m_get_user_tasks{nullptr};
+    func_get_filament_spools m_get_filament_spools{nullptr};
+    func_create_filament_spool m_create_filament_spool{nullptr};
+    func_update_filament_spool m_update_filament_spool{nullptr};
+    func_delete_filament_spools m_delete_filament_spools{nullptr};
+    func_get_filament_config m_get_filament_config{nullptr};
     func_get_printer_firmware m_get_printer_firmware{nullptr};
     func_get_task_plate_index m_get_task_plate_index{nullptr};
     func_get_user_info m_get_user_info{nullptr};

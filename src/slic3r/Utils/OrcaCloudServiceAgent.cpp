@@ -2367,6 +2367,46 @@ int OrcaCloudServiceAgent::get_user_tasks(TaskQueryParams params, std::string* h
     return BAMBU_NETWORK_SUCCESS;
 }
 
+int OrcaCloudServiceAgent::get_filament_spools(FilamentQueryParams params, std::string* http_body)
+{
+    (void)params;
+    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: get_filament_spools (stub)";
+    if (http_body) *http_body = "{}";
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int OrcaCloudServiceAgent::create_filament_spool(std::string request_body, std::string* http_body)
+{
+    (void)request_body;
+    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: create_filament_spool (stub)";
+    if (http_body) *http_body = "{}";
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int OrcaCloudServiceAgent::update_filament_spool(std::string spool_id, std::string request_body, std::string* http_body)
+{
+    (void)spool_id;
+    (void)request_body;
+    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: update_filament_spool (stub)";
+    if (http_body) *http_body = "{}";
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int OrcaCloudServiceAgent::delete_filament_spools(FilamentDeleteParams params, std::string* http_body)
+{
+    (void)params;
+    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: delete_filament_spools (stub)";
+    if (http_body) *http_body = "{}";
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int OrcaCloudServiceAgent::get_filament_config(std::string* http_body)
+{
+    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: get_filament_config (stub)";
+    if (http_body) *http_body = "{}";
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
 int OrcaCloudServiceAgent::get_printer_firmware(std::string dev_id, unsigned* http_code, std::string* http_body)
 {
     BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: get_printer_firmware (stub)";

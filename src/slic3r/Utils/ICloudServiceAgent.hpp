@@ -275,6 +275,12 @@ public:
      */
     virtual int get_user_tasks(TaskQueryParams params, std::string* http_body) = 0;
 
+    virtual int get_filament_spools(FilamentQueryParams params, std::string* http_body) = 0;
+    virtual int create_filament_spool(std::string request_body, std::string* http_body) = 0;
+    virtual int update_filament_spool(std::string spool_id, std::string request_body, std::string* http_body) = 0;
+    virtual int delete_filament_spools(FilamentDeleteParams params, std::string* http_body) = 0;
+    virtual int get_filament_config(std::string* http_body) = 0;
+
     /**
      * Fetch firmware information for a printer.
      */

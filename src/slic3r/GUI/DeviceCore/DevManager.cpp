@@ -6,6 +6,8 @@
 #include "slic3r/GUI/DeviceManager.hpp"
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
+#include "slic3r/GUI/MainFrame.hpp"
+#include "slic3r/GUI/DeviceWeb/DeviceWebPage.hpp"
 #include "slic3r/GUI/Plater.hpp"
 
 #include "libslic3r/Time.hpp"
@@ -883,6 +885,12 @@ namespace Slic3r
                 GUI::wxGetApp().sidebar().load_ams_list(obj_);
             }
         };
+
+        if (GUI::MainFrame* mf = GUI::wxGetApp().mainframe) {
+            if (GUI::DeviceWebPage* web = mf->web_device()) {
+                web->NotifyFilamentMachineChanged();
+            }
+        }
     }
 
     void DeviceManager::reload_printer_settings()

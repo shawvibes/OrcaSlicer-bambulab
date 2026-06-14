@@ -266,6 +266,20 @@ struct TaskQueryParams {
     int limit = 20;
 };
 
+struct FilamentQueryParams {
+    std::string category;
+    std::string status;
+    std::string spool_id;
+    std::string rfid;
+    int offset = 0;
+    int limit = 20;
+};
+
+struct FilamentDeleteParams {
+    std::vector<std::string> ids;
+    std::vector<std::string> rfids;
+};
+
 struct PublishParams {
     std::string project_name;
     std::string project_3mf_file;

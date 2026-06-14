@@ -459,6 +459,61 @@ int BBLCloudServiceAgent::get_user_tasks(TaskQueryParams params, std::string* ht
     return -1;
 }
 
+int BBLCloudServiceAgent::get_filament_spools(FilamentQueryParams params, std::string* http_body)
+{
+    auto& plugin = BBLNetworkPlugin::instance();
+    auto agent = plugin.get_agent();
+    auto func = plugin.get_get_filament_spools();
+    if (func && agent) {
+        return func(agent, params, http_body);
+    }
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int BBLCloudServiceAgent::create_filament_spool(std::string request_body, std::string* http_body)
+{
+    auto& plugin = BBLNetworkPlugin::instance();
+    auto agent = plugin.get_agent();
+    auto func = plugin.get_create_filament_spool();
+    if (func && agent) {
+        return func(agent, request_body, http_body);
+    }
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int BBLCloudServiceAgent::update_filament_spool(std::string spool_id, std::string request_body, std::string* http_body)
+{
+    auto& plugin = BBLNetworkPlugin::instance();
+    auto agent = plugin.get_agent();
+    auto func = plugin.get_update_filament_spool();
+    if (func && agent) {
+        return func(agent, spool_id, request_body, http_body);
+    }
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int BBLCloudServiceAgent::delete_filament_spools(FilamentDeleteParams params, std::string* http_body)
+{
+    auto& plugin = BBLNetworkPlugin::instance();
+    auto agent = plugin.get_agent();
+    auto func = plugin.get_delete_filament_spools();
+    if (func && agent) {
+        return func(agent, params, http_body);
+    }
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int BBLCloudServiceAgent::get_filament_config(std::string* http_body)
+{
+    auto& plugin = BBLNetworkPlugin::instance();
+    auto agent = plugin.get_agent();
+    auto func = plugin.get_get_filament_config();
+    if (func && agent) {
+        return func(agent, http_body);
+    }
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
 int BBLCloudServiceAgent::get_printer_firmware(std::string dev_id, unsigned* http_code, std::string* http_body)
 {
     auto& plugin = BBLNetworkPlugin::instance();

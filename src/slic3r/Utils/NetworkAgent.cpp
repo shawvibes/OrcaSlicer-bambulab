@@ -701,6 +701,36 @@ int NetworkAgent::get_user_tasks(TaskQueryParams params, std::string* http_body)
     return -1;
 }
 
+int NetworkAgent::get_filament_spools(FilamentQueryParams params, std::string* http_body)
+{
+    if (m_cloud_agent) return m_cloud_agent->get_filament_spools(params, http_body);
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int NetworkAgent::create_filament_spool(std::string request_body, std::string* http_body)
+{
+    if (m_cloud_agent) return m_cloud_agent->create_filament_spool(request_body, http_body);
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int NetworkAgent::update_filament_spool(std::string spool_id, std::string request_body, std::string* http_body)
+{
+    if (m_cloud_agent) return m_cloud_agent->update_filament_spool(spool_id, request_body, http_body);
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int NetworkAgent::delete_filament_spools(FilamentDeleteParams params, std::string* http_body)
+{
+    if (m_cloud_agent) return m_cloud_agent->delete_filament_spools(params, http_body);
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
+int NetworkAgent::get_filament_config(std::string* http_body)
+{
+    if (m_cloud_agent) return m_cloud_agent->get_filament_config(http_body);
+    return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+}
+
 int NetworkAgent::get_printer_firmware(std::string dev_id, unsigned* http_code, std::string* http_body)
 {
     if (m_cloud_agent) return m_cloud_agent->get_printer_firmware(dev_id, http_code, http_body);

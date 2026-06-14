@@ -81,6 +81,11 @@ public:
     int check_user_task_report(int* task_id, bool* printable) override;
     int get_user_print_info(unsigned int* http_code, std::string* http_body) override;
     int get_user_tasks(TaskQueryParams params, std::string* http_body) override;
+    int get_filament_spools(FilamentQueryParams params, std::string* http_body) override;
+    int create_filament_spool(std::string request_body, std::string* http_body) override;
+    int update_filament_spool(std::string spool_id, std::string request_body, std::string* http_body) override;
+    int delete_filament_spools(FilamentDeleteParams params, std::string* http_body) override;
+    int get_filament_config(std::string* http_body) override;
     int get_printer_firmware(std::string dev_id, unsigned* http_code, std::string* http_body) override;
     int get_task_plate_index(std::string task_id, int* plate_index) override;
     int get_user_info(int* identifier) override;

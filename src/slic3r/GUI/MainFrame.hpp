@@ -51,6 +51,7 @@ class Tab;
 class PrintHostQueueDialog;
 class Plater;
 class MainFrame;
+class DeviceWebPage;
 class ParamsDialog;
 #ifdef __WXGTK__
 class ResizeEdgePanel;
@@ -226,6 +227,7 @@ public:
         tpCalibration   = 6,
         tpAuxiliary     = 7,
         toDebugTool     = 8,
+        tpFilamentManager = 9,
     };
 
     //BBS: add slice&&print status update logic
@@ -343,6 +345,7 @@ public:
 
     void        add_to_recent_projects(const wxString& filename);
     void        get_recent_projects(boost::property_tree::wptree &tree, int images);
+    DeviceWebPage* web_device() const { return m_web_device; }
     void        open_recent_project(size_t file_id, wxString const & filename);
     void        remove_recent_project(size_t file_id, wxString const &filename);
 
@@ -382,6 +385,7 @@ public:
     ProjectPanel*         m_project{ nullptr };
 
     CalibrationPanel*     m_calibration{ nullptr };
+    DeviceWebPage*        m_web_device{ nullptr };
     WebViewPanel*         m_webview { nullptr };
     PrinterWebView*       m_printer_view{nullptr};
     wxLogWindow*          m_log_window { nullptr };

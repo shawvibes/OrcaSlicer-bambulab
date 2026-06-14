@@ -100,6 +100,14 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
     UpdateState();
 }
 
+void PrinterWebView::load_url(const wxString& url)
+{
+    if (m_browser == nullptr)
+        return;
+    m_browser->LoadURL(url);
+    UpdateState();
+}
+
 bool PrinterWebView::Show(bool show)
 {
     if (show && !m_url_deferred.empty()) {

@@ -63,6 +63,7 @@
 #include "Widgets/WebView.hpp"
 #include "DailyTips.hpp"
 #include "FilamentMapDialog.hpp"
+#include "slic3r/GUI/DeviceWeb/DeviceWebPage.hpp"
 
 #include "DeviceCore/DevManager.h"
 
@@ -1239,6 +1240,16 @@ void MainFrame::init_tabpanel() {
         else if (panel == m_monitor) {
             //monitor
         }
+        else if (panel == m_web_device) {
+#if defined(__WXOSX__)
+            CallAfter([this]() {
+                if (m_web_device && m_tabpanel && m_tabpanel->GetCurrentPage() == m_web_device)
+                    m_web_device->NavigateTo("/filament_manager");
+            });
+#else
+            m_web_device->NavigateTo("/filament_manager");
+#endif
+        }
 #ifndef __APPLE__
         if (sel == tp3DEditor) {
             m_topbar->EnableUndoRedoItems();
@@ -1247,9 +1258,17 @@ void MainFrame::init_tabpanel() {
             m_topbar->DisableUndoRedoItems();
         }
 #endif
-
+#ifndef __WXGTK__
+        if (panel
+#if defined(__WXOSX__)
+            && panel != m_web_device
+#endif
+        )
+            panel->SetFocus();
+#else
         if (panel)
             panel->SetFocus();
+#endif
 
         /*switch (sel) {
         case TabPosition::tpHome:
@@ -1317,6 +1336,9 @@ void MainFrame::init_tabpanel() {
     m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
     m_calibration->SetBackgroundColour(*wxWHITE);
     m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"), std::string("tab_calibration_active"), false);
+
+    m_web_device = new DeviceWebPage(m_tabpanel);
+    m_tabpanel->AddPage(m_web_device, _L("Filament Manager"), std::string("tab_filament_active"), std::string("tab_filament_active"), false);
 
     if (m_plater) {
         // load initial config
@@ -2413,6 +2435,8 @@ void MainFrame::on_dpi_changed(const wxRect& suggested_rect)
         m_multi_machine->msw_rescale();
     if(m_calibration)
         m_calibration->msw_rescale();
+    if (m_web_device)
+        m_web_device->msw_rescale();
 
     // BBS
 #if 0
@@ -2478,6 +2502,8 @@ void MainFrame::on_sys_color_changed()
         m_monitor->on_sys_color_changed();
     if(m_calibration)
         m_calibration->on_sys_color_changed();
+    if (m_web_device)
+        m_web_device->on_sys_color_changed();
     // update Tabs
     for (auto tab : wxGetApp().tabs_list)
         tab->sys_color_changed();

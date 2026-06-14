@@ -19,6 +19,9 @@
 #include "slic3r/GUI/HttpServer.hpp"
 #include "slic3r/GUI/fila_manager/wgtFilaManagerStore.h"
 #include "slic3r/GUI/fila_manager/wgtFilaManagerSync.h"
+#include "slic3r/GUI/fila_manager/wgtFilaManagerCloudClient.h"
+#include "slic3r/GUI/fila_manager/wgtFilaManagerCloudSync.h"
+#include "slic3r/GUI/fila_manager/wgtFilaManagerCloudDispatcher.h"
 #include "../Utils/PrintHost.hpp"
 
 #include <wx/app.h>
@@ -293,6 +296,9 @@ private:
     std::atomic<bool> m_is_closing {false};
     wgtFilaManagerStore*    m_fila_manager_store { nullptr };
     wgtFilaManagerSync*     m_fila_manager_sync  { nullptr };
+    wgtFilaManagerCloudClient*      m_fila_manager_cloud_client { nullptr };
+    wgtFilaManagerCloudSync*        m_fila_manager_cloud_sync   { nullptr };
+    wgtFilaManagerCloudDispatcher*  m_fila_manager_cloud_disp   { nullptr };
     Slic3r::DeviceManager* m_device_manager { nullptr };
     Slic3r::UserManager* m_user_manager { nullptr };
     Slic3r::TaskManager* m_task_manager { nullptr };
@@ -322,6 +328,9 @@ private:
     bool             m_show_error_msgdlg{false};
     wxString         m_info_dialog_content;
     HttpServer       m_http_server;
+#if !BBL_RELEASE_TO_PUBLIC
+    std::function<void(const nlohmann::json&)> m_fila_debug_sink;
+#endif
     bool             m_show_gcode_window{true};
     boost::thread    m_check_network_thread;
 public:
@@ -349,6 +358,22 @@ public:
     NetworkAgent* getAgent() { return m_agent; }
     wgtFilaManagerStore* fila_manager_store() { return m_fila_manager_store; }
     wgtFilaManagerSync*  fila_manager_sync()  { return m_fila_manager_sync; }
+    wgtFilaManagerCloudClient*      fila_manager_cloud_client() { return m_fila_manager_cloud_client; }
+    wgtFilaManagerCloudSync*        fila_manager_cloud_sync()   { return m_fila_manager_cloud_sync; }
+    wgtFilaManagerCloudDispatcher*  fila_manager_cloud_disp()   { return m_fila_manager_cloud_disp; }
+#if !BBL_RELEASE_TO_PUBLIC
+    void set_fila_debug_sink(std::function<void(const nlohmann::json&)> sink)
+    {
+        m_fila_debug_sink = std::move(sink);
+    }
+#else
+    void set_fila_debug_sink(std::function<void(const nlohmann::json&)> /*sink*/) {}
+#endif
+    void emit_fila_debug_log(const std::string& category,
+                             const std::string& level,
+                             const std::string& title,
+                             const std::string& summary,
+                             const nlohmann::json& detail = nlohmann::json::object());
 
     // Dynamic printer agent switching
     void switch_printer_agent();
