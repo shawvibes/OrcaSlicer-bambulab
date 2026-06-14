@@ -49,3 +49,5 @@ internal_docs/
 *.flatpak
 /flatpak-repo/
 /.idea/
+src/slic3r/GUI/DeviceWeb/device_page/dist/
+src/slic3r/GUI/DeviceWeb/device_page/node_modules/
