@@ -2511,6 +2511,12 @@ int GUI_App::OnExit()
 {
     stop_sync_user_preset();
 
+    if (m_fila_manager_store) {
+        m_fila_manager_store->save();
+        delete m_fila_manager_store;
+        m_fila_manager_store = nullptr;
+    }
+
     if (m_device_manager) {
         delete m_device_manager;
         m_device_manager = nullptr;
@@ -3040,6 +3046,12 @@ bool GUI_App::on_init_inner()
         BOOST_LOG_TRIVIAL(warning) << "Unknown display backend, defaulting to EGL";
     }
 #endif
+
+    if (!m_fila_manager_store) {
+        m_fila_manager_store = new wgtFilaManagerStore();
+        m_fila_manager_store->load();
+        BOOST_LOG_TRIVIAL(info) << "Filament Manager store initialized";
+    }
 
     BOOST_LOG_TRIVIAL(info) << "create the main window";
     mainframe = new MainFrame();
