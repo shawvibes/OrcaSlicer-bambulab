@@ -285,9 +285,9 @@ TEST_CASE("ColorType: swagger <-> FilamentColor::ColorType round-trip",
 TEST_CASE("ColorType: AMS enum maps to swagger colour type",
           "[fila_manager][colors][color_type_map]")
 {
-    REQUIRE(Slic3r::GUI::from_ams_color_type(static_cast<Slic3r::DevFilaColorType>(0)) == 0);
-    REQUIRE(Slic3r::GUI::from_ams_color_type(static_cast<Slic3r::DevFilaColorType>(1)) == 1);
-    REQUIRE(Slic3r::GUI::from_ams_color_type(static_cast<Slic3r::DevFilaColorType>(2)) == 2);
+    REQUIRE(Slic3r::GUI::from_ams_color_type(0) == 0);
+    REQUIRE(Slic3r::GUI::from_ams_color_type(1) == 1);
+    REQUIRE(Slic3r::GUI::from_ams_color_type(2) == 2);
 }
 
 #else // !BBL_TEST_HAS_WX — wx headers unavailable, mirror the spec table

@@ -838,9 +838,19 @@ nlohmann::json FilamentManagerVM::build_preset_options()
         if (!filament_id_set.insert(dedupe_key).second)
             continue;
 
-        std::string shown_name = filaments.get_preset_alias(*it, true);
-        if (shown_name.empty())
-            shown_name = it->display_name();
+        std::string shown_name = it->alias;
+        if (shown_name.empty()) {
+            const size_t at_pos = it->name.find('@');
+            shown_name = at_pos != std::string::npos ? it->name.substr(0, at_pos) : it->name;
+            while (!shown_name.empty() && shown_name.back() == ' ')
+                shown_name.pop_back();
+            const std::string vendor = it->config.get_filament_vendor();
+            if (!vendor.empty()) {
+                const std::string prefix = (vendor == "Bambu Lab" ? "Bambu" : vendor) + " ";
+                if (shown_name.size() >= prefix.size() && shown_name.compare(0, prefix.size(), prefix) == 0)
+                    shown_name.erase(0, prefix.size());
+            }
+        }
         if (shown_name.empty())
             continue;
 
@@ -971,9 +981,11 @@ nlohmann::json FilamentManagerVM::build_ams_data()
                                         }
                                     }
                                     fc.m_color_type = to_filament_color_type(color_type, colors.size());
-                                    if (auto* color_info = clr_query->GetFilaInfo(wxString::FromUTF8(tray->setting_id), fc)) {
-                                        t["color_name"]      = color_info->GetFilaColorName().utf8_string();
-                                        t["fila_color_code"] = color_info->GetFilaColorCode().utf8_string();
+                                    if (auto* codes = clr_query->GetFilaInfoMap(wxString::FromUTF8(tray->setting_id))) {
+                                        if (auto* color_info = codes->GetColorCode(fc)) {
+                                            t["color_name"]      = color_info->GetFilaColorName().utf8_string();
+                                            t["fila_color_code"] = color_info->GetFilaColorCode().utf8_string();
+                                        }
                                     }
                                 }
                             }

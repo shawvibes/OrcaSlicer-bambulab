@@ -9,8 +9,8 @@
 namespace Slic3r { namespace GUI {
 
 // Filament Manager's canonical color type matches the AMS/cloud/web wire
-// semantics: 0=gradient, 1=multicolor, 2=single. DevFilaColorType's legacy
-// enumerator names are misleading, so never switch on those names here.
+// semantics: 0=gradient, 1=multicolor, 2=single. DevAmsTray::ctype uses the
+// same integer values; never rely on legacy enumerator names here.
 enum class FilaManagerColorType : int
 {
     Gradient   = 0,
@@ -38,9 +38,9 @@ inline int to_fila_manager_color_type_int(FilaManagerColorType color_type)
     return static_cast<int>(color_type);
 }
 
-inline int from_ams_color_type(DevFilaColorType ctype, std::size_t color_count = 1)
+inline int from_ams_color_type(int ctype, std::size_t color_count = 1)
 {
-    switch (static_cast<int>(ctype)) {
+    switch (ctype) {
         case 0: return 0;
         case 1: return 1;
         case 2: return 2;
