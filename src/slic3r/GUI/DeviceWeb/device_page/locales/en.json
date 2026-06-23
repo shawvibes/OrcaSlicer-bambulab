@@ -142,6 +142,7 @@
   "Cloud · synced": "Cloud · synced",
   "Cloud · idle": "Cloud · idle",
   "Not logged in — cloud sync disabled": "Not signed in — cloud sync disabled",
+  "Cloud sync unavailable - not signed in": "Cloud sync unavailable - not signed in",
   "Last synced: {{time}}": "Last synced: {{time}}",
   "No sync yet": "No sync yet",
   "Sync filament info": "Sync filament info",

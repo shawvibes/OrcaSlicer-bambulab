@@ -131,13 +131,7 @@ export function FilamentManagerPage() {
   }, [fetchCloudSyncStatus, refreshAllFilamentLists, triggerCloudPull]);
 
   useEffect(() => {
-    if (isLoggedIn) return;
-    setSelected(new Set());
-    setDetailOpen(false);
-    setDetailSpool(null);
-    setDialogOpen(false);
-    setEditingSpool(null);
-    setPrefilledSpool(null);
+    if (!isLoggedIn) setHistoryOpen(false);
   }, [isLoggedIn]);
 
   // Apply theme
@@ -252,11 +246,10 @@ export function FilamentManagerPage() {
   }, []);
 
   const handleOpenAddDialog = useCallback(() => {
-    if (!isLoggedIn) return;
     setEditingSpool(null);
     setPrefilledSpool(null);
     setDialogOpen(true);
-  }, [isLoggedIn]);
+  }, []);
 
   const handleSubmitAdd = useCallback(async (data: Partial<Spool>, qty: number) => {
     if (qty > 1) return batchAddSpool(data, qty);
@@ -347,7 +340,7 @@ export function FilamentManagerPage() {
               <div className="flex items-center justify-between gap-4 shrink-0">
               <div className="flex items-center gap-4">
                 {/* Tabs */}
-                <div className={`flex gap-2 ${!isLoggedIn ? 'opacity-40 pointer-events-none' : ''}`}>
+                <div className="flex gap-2">
                   {(['all', 'ams'] as const).map((tb) => (
                     <div
                       key={tb}
@@ -364,7 +357,7 @@ export function FilamentManagerPage() {
                 <div className="w-px h-[11px] bg-fm-border" />
 
                 {/* Filters */}
-                <div className={`flex gap-2 ${!isLoggedIn ? 'opacity-40 pointer-events-none' : ''}`}>
+                <div className="flex gap-2">
                   {(['brand', 'material_type', 'series'] as const).map((fk) => (
                     <div key={fk} style={{ position: 'relative' }}>
                       <div
@@ -397,83 +390,86 @@ export function FilamentManagerPage() {
               </div>
 
               <div className="flex items-center gap-4">
-                <div className={`flex items-center gap-1 bg-fm-inner2 rounded-md px-2 h-[30px] w-[200px] ${!isLoggedIn ? 'opacity-40' : ''}`}>
+                <div className="flex items-center gap-1 bg-fm-inner2 rounded-md px-2 h-[30px] w-[200px]">
                   <svg className="text-fm-text-detail shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.2" />
                     <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.2" />
                   </svg>
                   <input
                     data-testid="filament-search"
-                    className="bg-transparent border-none outline-none text-fm-text-primary text-xs w-full placeholder:text-fm-text-detail disabled:cursor-not-allowed"
+                    className="bg-transparent border-none outline-none text-fm-text-primary text-xs w-full placeholder:text-fm-text-detail"
                     type="text"
                     placeholder={t('Search Filament')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    disabled={!isLoggedIn}
                   />
                 </div>
 
                 <button
                   data-testid="filament-group-toggle"
                   data-grouped={grouped ? 'true' : 'false'}
-                  className={`inline-flex items-center gap-1 h-[30px] px-3 rounded-lg border-none text-xs whitespace-nowrap transition-colors duration-150 bg-fm-inner text-fm-text-primary border border-fm-border-focus/50 hover:bg-fm-hover ${grouped ? '!bg-[rgba(44,173,0,0.08)] !border-fm-brand !text-[#50e81d]' : ''} ${!isLoggedIn ? 'opacity-40 cursor-not-allowed hover:bg-fm-inner' : 'cursor-pointer'}`}
+                  className={`inline-flex items-center gap-1 h-[30px] px-3 rounded-lg border-none text-xs whitespace-nowrap transition-colors duration-150 bg-fm-inner text-fm-text-primary border border-fm-border-focus/50 hover:bg-fm-hover cursor-pointer ${grouped ? '!bg-[rgba(44,173,0,0.08)] !border-fm-brand !text-[#50e81d]' : ''}`}
                   onClick={() => setGrouped(!grouped)}
-                  disabled={!isLoggedIn}
                 >
                   {t('Group')}
                 </button>
-                <CloudBadge
-                  state={cloudSync}
-                  onPullClick={handleCloudSyncClick}
-                  tooltipExtra={autoPushTooltip}
-                />
-                {/* STUDIO-18155: 手动"推送本地到云端"按钮。和"同步"（pull）
-                    分离：pull 是云端→本地，本按钮是本地→云端，绕过 throttle。 */}
-                <button
-                  type="button"
-                  data-testid="filament-push-all"
-                  data-pushing={pushingAll ? 'true' : 'false'}
-                  className={`inline-flex items-center justify-center h-[30px] w-[30px] rounded-lg border border-fm-border-focus/50 bg-fm-inner text-fm-text-secondary transition-colors duration-150 ${(!isLoggedIn || pushingAll) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-fm-hover'}`}
-                  title={t('Push Local to Cloud')}
-                  aria-label={t('Push Local to Cloud')}
-                  onClick={handlePushAllNowClick}
-                  disabled={!isLoggedIn || pushingAll}
-                >
-                  {pushingAll ? (
-                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2"/>
-                      <path d="M21 12a9 9 0 0 1-9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                      <path d="M4.5 13.5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      <path d="M9 4v7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                      <path d="M5.5 7.5L9 4l3.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  className={`inline-flex items-center justify-center h-[30px] w-[30px] rounded-lg border border-fm-border-focus/50 bg-fm-inner text-fm-text-secondary transition-colors duration-150 ${!isLoggedIn ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-fm-hover'}`}
-                  title={t('Sync History')}
-                  aria-label={t('Sync History')}
-                  onClick={() => setHistoryOpen(true)}
-                  disabled={!isLoggedIn}
-                >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                    <path d="M3.5 9a5.5 5.5 0 1 0 1.6-3.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M3.5 4v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M9 6v3.25L11 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
+                {isLoggedIn ? (
+                  <>
+                    <CloudBadge
+                      state={cloudSync}
+                      onPullClick={handleCloudSyncClick}
+                      tooltipExtra={autoPushTooltip}
+                    />
+                    {/* STUDIO-18155: 手动"推送本地到云端"按钮。和"同步"（pull）
+                        分离：pull 是云端→本地，本按钮是本地→云端，绕过 throttle。 */}
+                    <button
+                      type="button"
+                      data-testid="filament-push-all"
+                      data-pushing={pushingAll ? 'true' : 'false'}
+                      className={`inline-flex items-center justify-center h-[30px] w-[30px] rounded-lg border border-fm-border-focus/50 bg-fm-inner text-fm-text-secondary transition-colors duration-150 ${pushingAll ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-fm-hover'}`}
+                      title={t('Push Local to Cloud')}
+                      aria-label={t('Push Local to Cloud')}
+                      onClick={handlePushAllNowClick}
+                      disabled={pushingAll}
+                    >
+                      {pushingAll ? (
+                        <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2"/>
+                          <path d="M21 12a9 9 0 0 1-9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                          <path d="M4.5 13.5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          <path d="M9 4v7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          <path d="M5.5 7.5L9 4l3.5 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center h-[30px] w-[30px] rounded-lg border border-fm-border-focus/50 bg-fm-inner text-fm-text-secondary transition-colors duration-150 cursor-pointer hover:bg-fm-hover"
+                      title={t('Sync History')}
+                      aria-label={t('Sync History')}
+                      onClick={() => setHistoryOpen(true)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                        <path d="M3.5 9a5.5 5.5 0 1 0 1.6-3.9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M3.5 4v3h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M9 6v3.25L11 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </>
+                ) : (
+                  <span
+                    data-testid="cloud-sync-unavailable"
+                    className="text-fm-text-detail text-xs whitespace-nowrap"
+                  >
+                    {t('Cloud sync unavailable - not signed in')}
+                  </span>
+                )}
                 <button
                   data-testid="filament-add"
-                  className={`inline-flex items-center gap-1 h-[30px] px-3 rounded-lg border-none text-xs whitespace-nowrap transition-colors duration-150 font-medium ${
-                    isLoggedIn
-                      ? 'cursor-pointer bg-fm-brand text-white hover:bg-fm-brand-hover'
-                      : 'cursor-not-allowed bg-fm-brand/40 text-white/70'
-                  }`}
-                  disabled={!isLoggedIn}
+                  className="inline-flex items-center gap-1 h-[30px] px-3 rounded-lg border-none text-xs whitespace-nowrap transition-colors duration-150 font-medium cursor-pointer bg-fm-brand text-white hover:bg-fm-brand-hover"
                   onClick={handleOpenAddDialog}
                 >
                   {t('Add Filament')}
@@ -517,11 +513,6 @@ export function FilamentManagerPage() {
               {/* Table */}
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-fm-text-detail gap-4"><p>{t('Loading...')}</p></div>
-              ) : !isLoggedIn ? (
-                <div data-testid="auth-signed-out" className="flex flex-col items-center justify-center py-20 text-center gap-3 rounded-lg border border-fm-border bg-fm-inner">
-                  <p className="m-0 text-[15px] leading-[22px] text-fm-text-strong">{t('Not signed in — no data available')}</p>
-                  <p className="m-0 text-xs leading-[19px] text-fm-text-detail">{t('Please sign in to view your filament library.')}</p>
-                </div>
               ) : (
                 <SpoolTable
                   spools={filtered}

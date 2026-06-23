@@ -143,6 +143,7 @@
   "Cloud · synced": "云端 · 已同步",
   "Cloud · idle": "云端 · 空闲",
   "Not logged in — cloud sync disabled": "未登录 — 云端同步不可用",
+  "Cloud sync unavailable - not signed in": "云端同步不可用 — 未登录",
   "Last synced: {{time}}": "上次同步：{{time}}",
   "No sync yet": "尚未同步过",
   "Sync filament info": "同步耗材信息",

@@ -35,8 +35,8 @@ bool is_spool_cloud_write_action(const std::string& action)
 {
     return action == "add"
         || action == "batch_add"
-        // STUDIO-18344: AMS multi-select batch path. Same cloud-sync
-        // gating as the single add — must be logged in + server reachable.
+        // STUDIO-18344: AMS multi-select batch path. Cloud sync when logged in;
+        // otherwise saved directly to the local store.
         || action == "batch_create"
         || action == "update"
         || action == "remove"
@@ -209,9 +209,10 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
     if (action == "list") {
         return MakeResp("spool", action, 0, "", build_spool_list());
     }
-    if (is_spool_cloud_write_action(action) && (!store || !disp || !can_write_spool_to_cloud(agent))) {
-        return MakeResp("spool", action, -2, "cloud sync requires sign-in and network");
+    if (is_spool_cloud_write_action(action) && !store) {
+        return MakeResp("spool", action, -1, "store unavailable");
     }
+    const bool cloud_sync_available = disp && can_write_spool_to_cloud(agent);
     if (action == "add") {
         // Breadcrumbs: when the UI reports "add didn't take effect / no HTTP
         // fired", the debug log lets us see which of (parse / insert / save /
@@ -233,10 +234,18 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
         }
         s.cloud_synced = false;
 
-        publish_debug_log("data", "info", "Spool create queued",
-                          "A new spool create request was queued for cloud",
-                          {{"action", "add"}});
-        if (disp) disp->enqueue_push_create(s);
+        if (cloud_sync_available) {
+            publish_debug_log("data", "info", "Spool create queued",
+                              "A new spool create request was queued for cloud",
+                              {{"action", "add"}});
+            disp->enqueue_push_create(s);
+        } else {
+            store->add_spool(s);
+            store->save();
+            publish_debug_log("data", "info", "Spool added locally",
+                              "A new spool was saved to the local store (no cloud session)",
+                              {{"action", "add"}});
+        }
         publish_sync_state();
         return MakeResp("spool", action, 0, "", build_spool_list());
     }
@@ -249,10 +258,18 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
             s.cloud_synced = false;
             new_spools.push_back(s);
         }
-        publish_debug_log("data", "info", "Spool batch create queued",
-                          "Multiple spool create requests were queued for cloud",
-                          {{"action", "batch_add"}, {"count", qty}});
-        if (disp) for (auto& spool : new_spools) disp->enqueue_push_create(spool);
+        if (cloud_sync_available) {
+            publish_debug_log("data", "info", "Spool batch create queued",
+                              "Multiple spool create requests were queued for cloud",
+                              {{"action", "batch_add"}, {"count", qty}});
+            for (auto& spool : new_spools) disp->enqueue_push_create(spool);
+        } else {
+            for (auto& spool : new_spools) store->add_spool(spool);
+            store->save();
+            publish_debug_log("data", "info", "Spool batch added locally",
+                              "Multiple spools were saved to the local store (no cloud session)",
+                              {{"action", "batch_add"}, {"count", qty}});
+        }
         publish_sync_state();
         return MakeResp("spool", action, 0, "", build_spool_list());
     }
@@ -279,8 +296,10 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
         const nlohmann::json updates = payload.contains("updates") && payload["updates"].is_array()
                                            ? payload["updates"]
                                            : nlohmann::json::array();
-        publish_debug_log("data", "info", "Spool batch_create queued",
-                          "Batch create/update request from AMS multi-select",
+        publish_debug_log("data", "info", cloud_sync_available ? "Spool batch_create queued"
+                                                              : "Spool batch_create local",
+                          cloud_sync_available ? "Batch create/update request from AMS multi-select"
+                                               : "Batch create/update saved locally (no cloud session)",
                           {{"action", "batch_create"},
                            {"creates", static_cast<int>(creates.size())},
                            {"updates", static_cast<int>(updates.size())}});
@@ -290,7 +309,11 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
             try {
                 FilamentSpool s = FilamentSpool::from_json(entry);
                 s.cloud_synced = false;
-                if (disp) disp->enqueue_push_create(s);
+                if (cloud_sync_available) {
+                    disp->enqueue_push_create(s);
+                } else {
+                    store->add_spool(s);
+                }
                 ++created;
             } catch (const std::exception& e) {
                 publish_debug_log("data", "warn", "batch_create: create entry rejected",
@@ -315,12 +338,20 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
                                   {{"spool_id", updated_id}});
                 continue;
             }
-            if (disp) disp->enqueue_push_update(updated_id, entry);
+            if (cloud_sync_available) {
+                disp->enqueue_push_update(updated_id, entry);
+            } else {
+                store->apply_patch(updated_id, entry);
+            }
             ++updated;
         }
 
+        if (!cloud_sync_available && (created > 0 || updated > 0))
+            store->save();
+
         publish_debug_log("data", "info", "Spool batch_create accepted",
-                          "Enqueued create + update batch from AMS multi-select",
+                          cloud_sync_available ? "Enqueued create + update batch from AMS multi-select"
+                                               : "Saved create + update batch locally",
                           {{"created", created}, {"updated", updated}});
         publish_sync_state();
         return MakeResp("spool", action, 0, "", build_spool_list());
@@ -334,30 +365,46 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
         if (store && !updated_id.empty()) {
             can_update = store->get_spool(updated_id) != nullptr;
             if (can_update) {
-                publish_debug_log("data", "info", "Spool update queued",
-                                  "A spool update request was queued for cloud",
-                                  {{"action", "update"},
-                                   {"spool_id", updated_id},
-                                   {"patch_keys", static_cast<int>(payload.is_object() ?
-                                        payload.size() : 0)}});
+                if (cloud_sync_available) {
+                    publish_debug_log("data", "info", "Spool update queued",
+                                      "A spool update request was queued for cloud",
+                                      {{"action", "update"},
+                                       {"spool_id", updated_id},
+                                       {"patch_keys", static_cast<int>(payload.is_object() ?
+                                            payload.size() : 0)}});
+                    disp->enqueue_push_update(updated_id, payload);
+                } else {
+                    store->apply_patch(updated_id, payload);
+                    store->save();
+                    publish_debug_log("data", "info", "Spool updated locally",
+                                      "A spool was patched in the local store (no cloud session)",
+                                      {{"action", "update"}, {"spool_id", updated_id}});
+                }
             } else {
                 publish_debug_log("data", "warn", "Local spool patch skipped",
                                   "apply_patch could not find the target spool",
                                   {{"action", "update"}, {"spool_id", updated_id}});
             }
         }
-        if (disp && can_update) disp->enqueue_push_update(updated_id, payload);
         publish_sync_state();
         return MakeResp("spool", action, 0, "", build_spool_list());
     }
     if (action == "remove") {
         std::string sid = payload.value("spool_id", "");
         if (store && !sid.empty() && store->get_spool(sid)) {
-            publish_debug_log("data", "info", "Spool delete queued",
-                              "A spool delete request was queued for cloud",
-                              {{"action", "remove"}, {"spool_id", sid}});
+            if (cloud_sync_available) {
+                publish_debug_log("data", "info", "Spool delete queued",
+                                  "A spool delete request was queued for cloud",
+                                  {{"action", "remove"}, {"spool_id", sid}});
+                disp->enqueue_push_delete({sid});
+            } else {
+                store->remove_spool(sid);
+                store->save();
+                publish_debug_log("data", "info", "Spool deleted locally",
+                                  "A spool was removed from the local store (no cloud session)",
+                                  {{"action", "remove"}, {"spool_id", sid}});
+            }
         }
-        if (disp && !sid.empty()) disp->enqueue_push_delete({sid});
         publish_sync_state();
         return MakeResp("spool", action, 0, "", build_spool_list());
     }
@@ -366,14 +413,24 @@ nlohmann::json FilamentManagerVM::HandleSpool(const std::string& action, const n
         if (payload.contains("spool_ids")) {
             for (auto& sid : payload["spool_ids"]) ids.push_back(sid.get<std::string>());
         }
-        if (store) {
-            publish_debug_log("data", "info", "Spool batch delete queued",
-                              "Multiple spool delete requests were queued for cloud",
-                              {{"action", "batch_remove"},
-                               {"count", static_cast<int>(ids.size())},
-                               {"spool_ids", ids}});
+        if (store && !ids.empty()) {
+            if (cloud_sync_available) {
+                publish_debug_log("data", "info", "Spool batch delete queued",
+                                  "Multiple spool delete requests were queued for cloud",
+                                  {{"action", "batch_remove"},
+                                   {"count", static_cast<int>(ids.size())},
+                                   {"spool_ids", ids}});
+                disp->enqueue_push_delete(ids);
+            } else {
+                for (const auto& sid : ids) store->remove_spool(sid);
+                store->save();
+                publish_debug_log("data", "info", "Spool batch deleted locally",
+                                  "Multiple spools were removed from the local store (no cloud session)",
+                                  {{"action", "batch_remove"},
+                                   {"count", static_cast<int>(ids.size())},
+                                   {"spool_ids", ids}});
+            }
         }
-        if (disp && !ids.empty()) disp->enqueue_push_delete(ids);
         publish_sync_state();
         return MakeResp("spool", action, 0, "", build_spool_list());
     }
@@ -761,9 +818,6 @@ void FilamentManagerVM::publish_debug_log(const std::string& category,
 nlohmann::json FilamentManagerVM::build_spool_list()
 {
     auto* store = wxGetApp().fila_manager_store();
-    auto* agent = wxGetApp().getAgent();
-    if (!agent || !agent->is_user_login())
-        return nlohmann::json::array();
     nlohmann::json spools = store ? store->spools_to_json() : nlohmann::json::array();
     if (!spools.is_array()) return spools;
 
