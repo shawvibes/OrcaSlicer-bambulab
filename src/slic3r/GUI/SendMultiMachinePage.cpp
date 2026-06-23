@@ -4,6 +4,7 @@
 
 #include "GUI_App.hpp"
 #include "MainFrame.hpp"
+#include "fila_manager/wgtFilaManagerPrintCheckUI.h"
 #include "Widgets/RadioBox.hpp"
 #include <wx/listimpl.cpp>
 
@@ -695,6 +696,15 @@ void SendMultiMachinePage::on_send(wxCommandEvent& event)
 {
     event.Skip();
     BOOST_LOG_TRIVIAL(info) << "SendMultiMachinePage: on_send";
+
+    if (!confirm_print_filament_inventory(
+            this,
+            m_plater,
+            m_print_plate_idx,
+            wxGetApp().preset_bundle->full_config(),
+            &m_ams_mapping_result,
+            nullptr))
+        return;
 
     int result = m_plater->send_gcode(m_print_plate_idx, [this](int export_stage, int current, int total, bool& cancel) {
         if (m_is_canceled) return;

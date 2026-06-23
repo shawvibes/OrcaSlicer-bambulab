@@ -10,6 +10,7 @@
 #include <catch_main.hpp>
 
 #include "slic3r/GUI/fila_manager/wgtFilaManagerStore.h"
+#include "slic3r/GUI/fila_manager/wgtFilaManagerPrintCheck.h"
 
 using namespace Slic3r::GUI;
 
@@ -507,6 +508,179 @@ TEST_CASE("STUDIO-18355 (PULL): cloud_json_to_spool snaps color_code to colors.f
     REQUIRE(s.colors.size() == 1);
     CHECK(s.colors.front() == "#FF0000");
     CHECK(s.color_code == s.colors.front());
+}
+
+// ---------------------------------------------------------------------------
+// Low-filament inventory check (Phase 1)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+FilamentSpool make_inventory_spool(const std::string& sid,
+                                   const std::string& tag,
+                                   const std::string& setting_id,
+                                   const std::string& color,
+                                   double net_weight,
+                                   int remain_percent = -1)
+{
+    FilamentSpool s;
+    s.spool_id       = sid;
+    s.tag_uid        = tag;
+    s.setting_id     = setting_id;
+    s.color_code     = color;
+    s.color_name     = "Green";
+    s.material_type  = "PLA";
+    s.brand          = "Bambu Lab";
+    s.series         = "PLA Basic";
+    s.initial_weight = 1000.0;
+    s.net_weight     = net_weight;
+    if (remain_percent >= 0)
+        s.remain_percent = remain_percent;
+    return s;
+}
+
+GCodeProcessorResult make_slice_result_with_usage(int slot, double volume_mm3, float density)
+{
+    Slic3r::GCodeProcessorResult result;
+    result.filament_densities.assign(slot + 1, density);
+    result.print_statistics.total_volumes_per_extruder[slot] = volume_mm3;
+    return result;
+}
+
+} // namespace
+
+TEST_CASE("PrintCheck: spool_remaining_grams prefers net_weight",
+          "[fila_manager][print_check]")
+{
+    auto s = make_inventory_spool("S1", "D5191A1000000100", "GFB99", "#00AE42", 250.0, 100);
+    CHECK(spool_remaining_grams(s) == Approx(250.0));
+}
+
+TEST_CASE("PrintCheck: spool_remaining_grams falls back to remain_percent",
+          "[fila_manager][print_check]")
+{
+    auto s = make_inventory_spool("S2", "", "GFB99", "#00AE42", 0.0, 25);
+    CHECK(spool_remaining_grams(s) == Approx(250.0));
+}
+
+TEST_CASE("PrintCheck: spool_remaining_grams unknown when no weight data",
+          "[fila_manager][print_check]")
+{
+    FilamentSpool s;
+    s.initial_weight = 0.0;
+    s.remain_percent   = 100;
+    CHECK(spool_remaining_grams(s) < 0.0);
+}
+
+TEST_CASE("PrintCheck: compute_required_grams_per_filament",
+          "[fila_manager][print_check]")
+{
+    // 1000 mm^3 * 1.24 g/cm^3 * 0.001 = 1.24 g
+    const auto result = make_slice_result_with_usage(0, 1000.0, 1.24f);
+    const auto required = compute_required_grams_per_filament(result);
+    REQUIRE(required.size() == 1);
+    CHECK(required.at(0) == Approx(1.24));
+}
+
+TEST_CASE("PrintCheck: resolve_spool_for_slot prefers tag_uid",
+          "[fila_manager][print_check]")
+{
+    wgtFilaManagerStore store;
+    auto by_tag = make_inventory_spool("TAG", "D5191A1000000100", "GFB99", "#00AE42", 500.0);
+    auto by_color = make_inventory_spool("COLOR", "", "GFB99", "#00AE42", 100.0);
+    store.add_spool(by_tag);
+    store.add_spool(by_color);
+
+    FilamentSlotMapping mapping;
+    mapping.setting_id = "GFB99";
+    mapping.color_code = "#00AE42";
+    mapping.tag_uid    = "D5191A1000000100";
+
+    const FilamentSpool* resolved = resolve_spool_for_slot(store, mapping);
+    REQUIRE(resolved != nullptr);
+    CHECK(resolved->spool_id == "TAG");
+}
+
+TEST_CASE("PrintCheck: ambiguous setting_id + color is skipped",
+          "[fila_manager][print_check]")
+{
+    wgtFilaManagerStore store;
+    store.add_spool(make_inventory_spool("A", "", "GFB99", "#00AE42", 500.0));
+    store.add_spool(make_inventory_spool("B", "", "GFB99", "#00AE42", 400.0));
+
+    FilamentSlotMapping mapping;
+    mapping.filament_slot = 0;
+    mapping.setting_id    = "GFB99";
+    mapping.color_code    = "#00AE42";
+
+    CHECK(resolve_spool_for_slot(store, mapping) == nullptr);
+}
+
+TEST_CASE("PrintCheck: warns only when remaining is less than required",
+          "[fila_manager][print_check]")
+{
+    wgtFilaManagerStore store;
+    auto spool = make_inventory_spool("S1", "", "GFB99", "#00AE42", 10.0);
+    store.add_spool(spool);
+
+    std::map<size_t, double> required{{0, 10.0}};
+    std::vector<FilamentSlotMapping> mappings{{0, "GFB99", "#00AE42", ""}};
+
+    auto exact = check_filament_inventory(required, store, mappings);
+    CHECK_FALSE(exact.has_shortage());
+
+    required[0] = 10.01;
+    auto short_result = check_filament_inventory(required, store, mappings);
+    REQUIRE(short_result.has_shortage());
+    REQUIRE(short_result.shortages.size() == 1);
+    CHECK(short_result.shortages.front().short_by_g == Approx(0.01).margin(1e-9));
+    CHECK(short_result.unmapped_slot_count == 0);
+}
+
+TEST_CASE("PrintCheck: unmapped slots are counted for footer note",
+          "[fila_manager][print_check]")
+{
+    wgtFilaManagerStore store;
+    store.add_spool(make_inventory_spool("S1", "", "GFB99", "#00AE42", 100.0));
+
+    std::map<size_t, double> required{{0, 5.0}, {1, 5.0}};
+    std::vector<FilamentSlotMapping> mappings{{0, "GFB99", "#00AE42", ""}};
+
+    auto result = check_filament_inventory(required, store, mappings);
+    CHECK_FALSE(result.has_shortage());
+    CHECK(result.unmapped_slot_count == 1);
+    CHECK(result.has_unmapped_slots());
+}
+
+TEST_CASE("PrintCheck: check_slice_result_inventory end-to-end",
+          "[fila_manager][print_check]")
+{
+    wgtFilaManagerStore store;
+    store.add_spool(make_inventory_spool("S1", "D5191A1000000100", "GFB99", "#00AE42", 1.0));
+
+    auto slice = make_slice_result_with_usage(0, 2000.0, 1.24f); // 2.48 g required
+    std::vector<std::string> setting_ids{"GFB99"};
+    std::vector<std::string> colours{"#00AE42"};
+
+    std::vector<Slic3r::FilamentInfo> ams_mapping;
+    Slic3r::FilamentInfo mapped;
+    mapped.id      = 0;
+    mapped.ams_id  = "0";
+    mapped.slot_id = "2";
+    ams_mapping.push_back(mapped);
+
+    const auto result = check_slice_result_inventory(
+        slice,
+        store,
+        setting_ids,
+        colours,
+        &ams_mapping,
+        [](const std::string&, int) { return std::string("D5191A1000000100"); });
+
+    REQUIRE(result.has_shortage());
+    CHECK(result.shortages.front().required_g == Approx(2.48));
+    CHECK(result.shortages.front().remaining_g == Approx(1.0));
+    CHECK(result.shortages.front().short_by_g == Approx(1.48));
 }
 
 TEST_CASE("STUDIO-18355 (PULL): cloud response with empty colors keeps top-level color intact",

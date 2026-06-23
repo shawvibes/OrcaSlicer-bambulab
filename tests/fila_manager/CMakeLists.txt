@@ -3,6 +3,7 @@ get_filename_component(_TEST_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 add_executable(${_TEST_NAME}_tests
     ${_TEST_NAME}_tests_main.cpp
     ${PROJECT_SOURCE_DIR}/src/slic3r/GUI/fila_manager/wgtFilaManagerStore.cpp
+    ${PROJECT_SOURCE_DIR}/src/slic3r/GUI/fila_manager/wgtFilaManagerPrintCheck.cpp
 )
 
 target_include_directories(${_TEST_NAME}_tests PRIVATE

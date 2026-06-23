@@ -4,6 +4,10 @@
 list(APPEND SLIC3R_GUI_SOURCES
     GUI/fila_manager/wgtFilaManagerStore.h
     GUI/fila_manager/wgtFilaManagerStore.cpp
+    GUI/fila_manager/wgtFilaManagerPrintCheck.h
+    GUI/fila_manager/wgtFilaManagerPrintCheck.cpp
+    GUI/fila_manager/wgtFilaManagerPrintCheckUI.h
+    GUI/fila_manager/wgtFilaManagerPrintCheckUI.cpp
     GUI/fila_manager/wgtFilaManagerSync.h
     GUI/fila_manager/wgtFilaManagerSync.cpp
     GUI/fila_manager/wgtFilaManagerCloudClient.h

@@ -111,6 +111,7 @@
 #include "ModelMall.hpp"
 #include "ConfigWizard.hpp"
 #include "SyncAmsInfoDialog.hpp"
+#include "fila_manager/wgtFilaManagerPrintCheckUI.h"
 #include "../Utils/ASCIIFolding.hpp"
 #include "../Utils/FixModelByWin10.hpp"
 #include "../Utils/UndoRedo.hpp"
@@ -9671,6 +9672,13 @@ void Plater::priv::on_process_completed(SlicingProcessCompletedEvent &evt)
     if (!this->background_process.empty())
         this->background_process.get_current_plate()->update_slice_result_valid_state(evt.success());
 
+    if (evt.success() && !has_error && this->printer_technology == ptFFF) {
+        notify_post_slice_filament_inventory(
+            notification_manager.get(),
+            partplate_list.get_curr_plate(),
+            wxGetApp().preset_bundle->full_config());
+    }
+
     //BBS: update the action button according to the current plate's status
     bool ready_to_slice = !this->partplate_list.get_curr_plate()->is_slice_result_valid();
 
@@ -9867,6 +9875,8 @@ void Plater::priv::on_action_slice_plate(SimpleEvent&)
         Model::setExtruderParams(config, numExtruders);
         Model::setPrintSpeedTable(config, print_config);
         m_slice_all = false;
+        if (!confirm_pre_slice_filament_inventory(q, q, false, config))
+            return;
         q->reslice();
         q->select_view_3D("Preview");
     }
@@ -9890,6 +9900,8 @@ void Plater::priv::on_action_slice_all(SimpleEvent&)
         m_cur_slice_plate = 0;
         //select plate
         q->select_plate(m_cur_slice_plate);
+        if (!confirm_pre_slice_filament_inventory(q, q, true, config))
+            return;
         q->reslice();
         if (!m_is_publishing)
             q->select_view_3D("Preview");
@@ -15824,6 +15836,16 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn, bool us
         unsigned int state = this->p->update_restart_background_process(false, false);
         if (state & priv::UPDATE_BACKGROUND_PROCESS_INVALID)
             return;
+
+        if (!confirm_print_filament_inventory(
+                this,
+                this,
+                plate_idx,
+                wxGetApp().preset_bundle->full_config(),
+                nullptr,
+                nullptr))
+            return;
+
         default_output_file = this->p->background_process.output_filepath_for_project("");
     } catch (const Slic3r::PlaceholderParserError& ex) {
         // Show the error with monospaced font.

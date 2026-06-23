@@ -35,6 +35,7 @@
 #include <miniz.h>
 #include <algorithm>
 #include "Plater.hpp"
+#include "fila_manager/wgtFilaManagerPrintCheckUI.h"
 #include "Notebook.hpp"
 #include "BitmapCache.hpp"
 #include "BindDialog.hpp"
@@ -1931,6 +1932,15 @@ void SelectMachineDialog::on_ok_btn(wxCommandEvent &event)
     if (!dev) return;
     MachineObject* obj_ = dev->get_selected_machine();
     if (!obj_) return;
+
+    if (!confirm_print_filament_inventory(
+            this,
+            m_plater,
+            m_print_plate_idx,
+            wxGetApp().preset_bundle->full_config(),
+            &m_ams_mapping_result,
+            obj_))
+        return;
 
     std::vector<ConfirmBeforeSendInfo> confirm_text;
 
