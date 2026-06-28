@@ -21,3 +21,15 @@ The history favors concise, sentence-style subject lines with optional issue ref
 
 ## Security & Configuration Tips
 Follow `SECURITY.md` for vulnerability reporting. Keep API tokens and printer credentials out of tracked configs; use `sandboxes/` for experimental settings. When touching third-party code in `deps_src/`, record the upstream commit or release in your PR description and run the relevant platform build script to confirm integration.
+
+## Cursor Cloud specific instructions
+This is a single C++/wxWidgets desktop app (`orca-slicer`); there is no backend/web service. The VM snapshot already has system packages installed, the vendored deps prebuilt in `deps/build/`, and the app prebuilt in `build/` — so a normal startup needs no rebuild.
+
+- **Default compiler must be GCC.** This Ubuntu 24.04 image ships with `update-alternatives` pointing `c++`/`cc` at Clang, but Clang here can't find `-lstdc++`, so any CMake configure (deps or app) fails with `cannot find -lstdc++`. The repo build defaults to GCC, so `c++`/`cc` must resolve to `g++`/`gcc` (`sudo update-alternatives --set c++ /usr/bin/g++`, `--set cc /usr/bin/gcc`). This is asserted by the startup update script.
+- **Build commands** are the standard ones in `build_linux.sh` / README: `./build_linux.sh -d` (vendored deps, ~30 min), `./build_linux.sh -s` (app), `./build_linux.sh -st` (app + tests). A full from-scratch deps+app build is ~2 hours. Incremental app rebuilds after code edits: `cmake --build build --config Release --target OrcaSlicer`.
+- **Built binary:** `build/src/Release/orca-slicer` (also `build/orca-slicer`). It locates resources relative to the executable via the `build/resources -> /workspace/resources` symlink, so run it from the repo without copying resources.
+- **Tests:** `ctest --test-dir build -C Release --output-on-failure` (Catch2; 146 cases, ~24 s).
+- **Lint:** `clang-format` against `.clang-format` (e.g. `clang-format --dry-run --Werror <file>`). Note much of the existing tree is not clang-format-clean, so only lint files you touch.
+- **Running the GUI is headless.** There is no real display, so start a virtual X server and force software OpenGL: `Xvfb :99 -screen 0 1920x1080x24 &` then run with `DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe MESA_GL_VERSION_OVERRIDE=3.3 ./build/src/Release/orca-slicer --datadir /tmp/orca_data`. For `computerUse`-driven GUI testing, launch the app on display `:1` instead (that is the display the computerUse tooling drives).
+- **First-run prompts:** the app shows a "use system SSL certificate" Yes/No dialog and a Setup Wizard. Export `SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt` to suppress the SSL prompt; the Setup Wizard still requires picking a printer once (it is saved into `--datadir`).
+- **CLI slicing is currently broken on this branch.** `orca-slicer --slice ... --outputdir ...` segfaults inside `Slic3r::CLI::run` immediately, even with a valid display. This is an app bug, not an environment problem (the GUI uses the same init path and works). Use the GUI to slice/validate end-to-end.
